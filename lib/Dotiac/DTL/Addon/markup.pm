@@ -1,8 +1,8 @@
 ###############################################################################
 #unparsed.pm
-#Last Change: 2009-01-21
+#Last Change: 2009-02-09
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
-#Version 0.1
+#Version 0.2
 ####################
 #This file is an addon to the Dotiac::DTL project. 
 #http://search.cpan.org/perldoc?Dotiac::DTL
@@ -29,13 +29,14 @@ require Dotiac::DTL::Value;
 
 
 
-our $VERSION=0.1;
+our $VERSION=0.2;
 
 my $oldmarkdown;
 my $oldtextile;
 my $oldrest;
 
 sub import {
+	no warnings qw/redefine/;
 	$oldrest = *{Dotiac::DTL::Filter::restructuredtext};
 	$oldmarkdown = *{Dotiac::DTL::Filter::markdown};
 	$oldtextile = *{Dotiac::DTL::Filter::textile};
@@ -45,6 +46,7 @@ sub import {
 
 }
 sub unimport {
+	no warnings qw/redefine/;
 	*{Dotiac::DTL::Filter::restructuredtext} = $oldrest;
 	*{Dotiac::DTL::Filter::markdown} = $oldmarkdown;
 	*{Dotiac::DTL::Filter::textile} = $oldtextile;
@@ -59,22 +61,31 @@ sub textile {
 	return Dotiac::DTL::Value->safe(Text::Textile::textile($val->repr()));
 }
 sub restructuredtext {
-	require Text::Restructured::Writer;
-	require Text::Restructured::DOM;
-	require File::Temp; #Has to be installed by Dotiac::DTL
-	my $writer = new Text::Restructured::Writer('html',{w=>'html',d=>0,D=>{}});
-	my $value=shift;
-	$value=$value->repr;
-	my $dom;
-	if ($value =~ /^<document/) {
-		$dom = Text::Restructured::DOM::Parse($value, {w=>'html',d=>0,D=>{}});
-	}
-	else {
-		require Text::Restructured;
-		my $rst_parser = new Text::Restructured({w=>'html',d=>0,D=>{}}, "1 release 1");
-		$dom = $rst_parser->Parse($value, tmpnam());
-	}
-	return Dotiac::DTL::Value->safe($writer->ProcessDOM($dom));
+	return eval {
+		no warnings qw/redefine/;
+		my $w=$^W;
+		$^W=0;
+		require Text::Restructured::Writer;
+		require Text::Restructured::DOM;
+		require File::Temp; #Has to be installed by Dotiac::DTL
+		my $writer = new Text::Restructured::Writer('html',{w=>'html',d=>0,D=>{}});
+		my $value=shift;
+		$value=$value->repr;
+		my $dom;
+		if ($value =~ /^<document/) {
+			$dom = Text::Restructured::DOM::Parse($value, {w=>'html',d=>0,D=>{}});
+		}
+		else {
+			require Text::Restructured;
+			my $rst_parser = new Text::Restructured({w=>'html',d=>0,D=>{}}, "1 release 1");
+			$dom = $rst_parser->Parse($value, tmpnam());
+		}
+		my $x=$writer->ProcessDOM($dom);
+		$^W=$w;
+		$x=substr $x,index($x,"<body>")+6;
+		$x=substr $x,0,index($x,"<div class=\"footer\"");
+		return Dotiac::DTL::Value->safe($x);
+	} || Dotiac::DTL::Value->safe("");
 }
 
 1;

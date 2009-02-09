@@ -1,4 +1,4 @@
-use Test::More tests=>12;
+use Test::More tests=>18;
 chdir "t";
 no warnings;
 
@@ -51,8 +51,7 @@ my $rest = <<EOR;
 =====
 Title
 =====
-Subtitle
--------- 
+
 
 Titles are underlined (or over-
 and underlined) with a printing
@@ -63,5 +62,32 @@ character.
 - This is item 2 
 
 EOR
-#my $rest2=rest($rest);
-#dtest("filter_restructuredtext.html","\n",{text=>$rest}); #Can't test because text::Restructured is just ugly and won't compile on Win32
+SKIP: {
+	eval {
+		require Text::Restructured::Writer;
+		require Text::Restructured::DOM;		
+		1;
+	} or skip("Text::Restructured not installed",6);
+	my $restmaker=sub {
+		my $w=$^W;
+		$^W=0;
+		my $writer = new Text::Restructured::Writer('html',{w=>'html',d=>0,D=>{}});
+		my $value=shift;
+		my $dom;
+		if ($value =~ /^<document/) {
+			$dom = Text::Restructured::DOM::Parse($value, {w=>'html',d=>0,D=>{}});
+		}
+		else {
+			require Text::Restructured;
+			my $rst_parser = new Text::Restructured({w=>'html',d=>0,D=>{}}, "1 release 1");
+			$dom = $rst_parser->Parse($value, tmpnam());
+		}
+		my $x=$writer->ProcessDOM($dom);
+		$^W=$w;
+		$x=substr $x,index($x,"<body>")+6;
+		$x=substr $x,0,index($x,"<div class=\"footer\"");
+		return $x;
+	};	
+	my $rest2=$restmaker->($rest);
+	dtest("filter_restructuredtext.html","A$rest2"."A\n",{text=>$rest}); 
+}

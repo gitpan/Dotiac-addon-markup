@@ -1,5 +1,5 @@
-Dotiac::DTL
-===========
+Dotiac::DTL::Addon::markup
+==========================
 
 INSTALLATION
 
@@ -12,11 +12,11 @@ To install this module type the following:
 
 DEPENDENCIES
 
-  perl 5.8.1
+  perl 5.6.1
 
 COPYRIGHT AND LICENCE
 
-Copyright (c) 2002-2008 Marc Lucksch
+Copyright (c) 2002-2009 Marc Lucksch
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
